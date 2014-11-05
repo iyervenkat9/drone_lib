@@ -35,6 +35,9 @@ typedef struct _gps_coordinate {
 	float gps_lon;
 } gps_coordinate_t;
 
+float psi_val, vx_val, vy_val, vz_val, x_distance;
+int lock_on;
+
 gps_coordinate_t gps_points[MAX_WAYPOINTS]; 
 uint8_t wptr, num_waypoints;
 
@@ -637,3 +640,13 @@ void navigate_next(uint8_t waypoint_ptr);
 
 /* Travel a given distance with a heading ref */
 void travel_distance(float ref, float req_distance);
+
+
+void clockwise(float r_angle, int ntimes);
+void anti_clockwise(float l_angle, int ntimes);
+void clockwise_turn(float r_angle, float setpoint);
+void anti_clockwise_turn(float l_angle, float setpoint);
+void go_forward(float r_tilt, int ntimes);
+void go_backward(float r_tilt, int ntimes);
+void forward_distance(float r_tilt, float req_distance);
+

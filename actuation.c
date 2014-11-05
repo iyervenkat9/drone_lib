@@ -176,22 +176,6 @@ void rotate_right(float r_angle) {
 	pthread_mutex_unlock(&at_mutex);
 }
 
-void clockwise(float r_angle, int ntimes) {	
-	while (ntimes > 0) {
-		rotate_right(r_angle);
-		usleep(100000);
-		ntimes--;
-	}	
-}
-
-void anti_clockwise(float l_angle, int ntimes) {
-	while (ntimes > 0) {
-		rotate_left(l_angle);
-		usleep(100000);
-		ntimes--;
-	}		
-}
-
 void tilt_left(float r_tilt) {
 	char r_str[80];
 	strcpy(r_str, "AT*PCMD_MAG=");
@@ -277,13 +261,6 @@ void tilt_forward(float r_tilt) {
 	pthread_mutex_unlock(&at_mutex);
 }
 
-void go_forward(float r_tilt, int ntimes) {
-	while (ntimes > 0) {
-		tilt_forward(r_tilt);
-		usleep(60000);
-		ntimes--;
-	}
-}
 
 void tilt_backward(float r_tilt) {
 	char r_str[80];
@@ -307,14 +284,6 @@ void tilt_backward(float r_tilt) {
 	int num_bytes = sendto(sockfd,r_str, strlen(r_str), 0, 
 		(struct sockaddr *) &sock_info, sizeof(sock_info));
 	pthread_mutex_unlock(&at_mutex);
-}
-
-void go_backward(float r_tilt, int ntimes) {
-	while (ntimes > 0) {
-		tilt_forward(r_tilt);
-		usleep(60000);
-		ntimes--;
-	}
 }
 
 

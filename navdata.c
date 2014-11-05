@@ -595,3 +595,114 @@ float get_distance(float gps_lat, float gps_lon)
 	return d;
 }
 
+
+void clockwise(float r_angle, int ntimes) {	
+	float psi_old = psi_val, angle_measure = 0;
+	printf("psi_old = %f, psi_val = %f\n", psi_old, psi_val);
+	while (ntimes > 0) {
+		//rotate_right(r_angle);
+		usleep(50000);
+		if (psi_val >= psi_old)		
+			angle_measure = angle_measure + (psi_val - psi_old) / 1000.0;
+		else
+			angle_measure = angle_measure + 360 + (psi_val - psi_old) / 1000.0;
+			
+		psi_old = psi_val;
+		ntimes--;
+	}	
+	
+	printf("angle_measure clockwise = %f\n", angle_measure);
+}
+
+void clockwise_turn(float r_angle, float setpoint) {	
+	float psi_old = psi_val, angle_measure = 0;
+	int ntimes = 100;
+	while ((angle_measure < setpoint) && (ntimes > 0)) {
+		rotate_right(r_angle);
+		usleep(50000);
+		if (psi_val >= psi_old)		
+			angle_measure = angle_measure + (psi_val - psi_old) / 1000.0;
+		else
+			angle_measure = angle_measure + 360 + (psi_val - psi_old) / 1000.0;
+		psi_old = psi_val;
+		ntimes--;
+	}	
+	
+	printf("angle_measure clockwise = %f, ntimes = %d\n", 
+			angle_measure, 100-ntimes);
+}
+
+void anti_clockwise_turn(float l_angle, float setpoint) {
+	float psi_old = psi_val, angle_measure = 0;
+	int ntimes = 100;
+	while ((angle_measure < setpoint) && (ntimes > 0)) {
+		rotate_left(l_angle);
+		usleep(50000);
+		if (psi_old >= psi_val)
+			angle_measure = angle_measure + (psi_old - psi_val) / 1000.0;
+		else
+			angle_measure = angle_measure + 360 + (psi_old - psi_val) / 1000.0;
+		psi_old = psi_val;
+		ntimes--;
+	}
+	
+	printf("angle_measure counter-clockwise = %f, ntimes = %d\n",
+			angle_measure, ntimes);		
+}
+
+
+void anti_clockwise(float l_angle, int ntimes) {
+	float psi_old = psi_val, angle_measure = 0;
+	while (ntimes > 0) {
+		usleep(50000);
+		angle_measure = angle_measure + (psi_val - psi_old) / 1000.0;
+		psi_old = psi_val;
+		ntimes--;
+	}
+	
+	printf("angle_measure counter-clockwise = %f\n", angle_measure);		
+}
+
+
+void go_forward(float r_tilt, int ntimes) {
+	//x_distance = 0; 
+	lock_on = 1;
+	while (ntimes > 0) {
+		tilt_forward(r_tilt);
+		usleep(50000);					
+		ntimes--;
+	}
+	lock_on = 0;
+	usleep(500000);
+}
+
+void forward_distance(float r_tilt, float req_distance) {
+	int maxiter = 5, ntimes;
+	// Set to a random value
+	float distance_per_command = 0.07, alpha_coeff = 0.7, prev_dist;
+	x_distance = 0;
+	
+	while ((x_distance < req_distance) && (maxiter > 0)) {
+		prev_dist = x_distance;
+		ntimes = (2*((req_distance - x_distance) * alpha_coeff
+				 / distance_per_command) + 1) / 2;
+		if ((ntimes > 30) || (ntimes < 0)) {
+			ntimes = 5;
+			go_forward(r_tilt, ntimes);
+		}
+		else
+			go_forward(r_tilt, ntimes);
+		sleep(1);
+		distance_per_command = (x_distance - prev_dist) / ntimes;
+		maxiter--;
+	}
+	printf("done %f m\n", x_distance);
+}
+
+void go_backward(float r_tilt, int ntimes) {
+	while (ntimes > 0) {
+		tilt_forward(r_tilt);
+		usleep(50000);
+		ntimes--;
+	}
+}

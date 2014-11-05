@@ -44,14 +44,10 @@ void tilt_backward(float r_tilt);
 /* Actuation commands for continuous drone movements
  * over a longer time scale
  */ 
-void go_forward(float r_tilt, int ntimes);
-void clockwise(float r_angle, int ntimes);
-void anti_clockwise(float l_angle, int ntimes);
 void move_up(float speed, int ntimes);
 void move_down(float speed, int ntimes);
 void roll_left(float r_tilt, int ntimes);
 void roll_right(float r_tilt, int ntimes);
-void go_backward(float r_tilt, int ntimes);
 
 /* AT commands for Takeoff and Landing */
 void takeoff();
