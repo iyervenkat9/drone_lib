@@ -86,8 +86,8 @@ void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n) {
         case ARDRONE_NAVDATA_GPS_TAG:
             gps_ptr = (gps *) n;
             //printf("gps lat: %f, gps lon: %f, gps elevation %f\n", gps_data->lat, gps_data->lon, gps_data->elevation);
-            gps_heading_info[struct_ptr].gps_lat = gps_ptr->lat;
-            gps_heading_info[struct_ptr].gps_lon = gps_ptr->lon;
+            gps_data[struct_ptr].gps_lat = gps_ptr->lat;
+            gps_data[struct_ptr].gps_lon = gps_ptr->lon;
         break;
         case ARDRONE_NAVDATA_CKS_TAG:
         break;
@@ -230,36 +230,21 @@ void nav_read() {
 	}
 }
 
-nav_gps_heading_t get_avg_heading() {
+void update_gps_state() {
     nav_gps_heading_t avg_gps_hd;
 
-    float avg_heading = 0;
-    float avg_lon = 0;
-    float avg_lat = 0;
-    float avg_wind_speed = 0, avg_wind_angle = 0;
+    gps_state.avg_lon = 0;
+    gps_state.avg_lat = 0;
     uint8_t i;
 
     for (i = 0; i < GPS_STRUCT_MAX_ELEMENTS; i++) {
-        avg_heading = avg_heading + gps_heading_info[i].heading;
-        avg_lon = avg_lon + gps_heading_info[i].gps_lon;
-        avg_lat = avg_lat + gps_heading_info[i].gps_lat;
-        avg_wind_speed = avg_wind_speed + gps_heading_info[i].wind_speed;
-        avg_wind_angle = avg_wind_angle + gps_heading_info[i].wind_angle;
-	}
+        gps_state.avg_lon = gps_state.avg_lon + gps_data[i].gps_lon;
+        gps_state.avg_lat = gps_state.avg_lat + gps_data[i].gps_lat;
+    }
         
 
-    avg_heading = avg_heading*1.0 / GPS_STRUCT_MAX_ELEMENTS;     
-    avg_lon = avg_lon*1.0 / GPS_STRUCT_MAX_ELEMENTS;
-    avg_lat = avg_lat*1.0 / GPS_STRUCT_MAX_ELEMENTS;
-    avg_wind_speed = avg_wind_speed*1.0/GPS_STRUCT_MAX_ELEMENTS;
-    avg_wind_angle = avg_wind_angle*1.0/GPS_STRUCT_MAX_ELEMENTS;
-
-    avg_gps_hd.heading = avg_heading;
-    avg_gps_hd.gps_lon = avg_lon;
-    avg_gps_hd.gps_lat = avg_lat;
-    avg_gps_hd.wind_speed = avg_wind_speed;
-    avg_gps_hd.wind_angle = avg_wind_angle;
-    return avg_gps_hd;
+    gps_state.avg_lon = gps_state.avg_lon*1.0 / GPS_STRUCT_MAX_ELEMENTS;
+    gps_state.avg_lat = gps_state.avg_lat*1.0 / GPS_STRUCT_MAX_ELEMENTS;
 }
 
 
@@ -283,44 +268,6 @@ void navigate_next(uint8_t waypoint_ptr) {
 		printf("distance = %f, bearing = %f\n", dist, ref);		
 	}
 }
-
-void travel_distance(float ref, float req_distance) {
-	int count, ntimes;
-	nav_gps_heading_t avg_heading;
-	float diff_dist, dist;
-	count = 0;
-	set_drone_heading(ref);
-	avg_heading = get_avg_heading();
-	
-	dist = 0;
-	diff_dist = req_distance - dist;					
-	if (dist > req_distance)
-		printf("Initial distance = %f\n", dist);
-	// 2 times - 1 m -- roughly
-	while (diff_dist >= 5.0 && count<7) {
-		count++;		
-				
-		if (diff_dist >= 0) {
-			ntimes = diff_dist*2;
-			if (ntimes > 20)
-				ntimes = 1;
-			go_forward(1,ntimes);
-		}	
-		else {
-			ntimes = -diff_dist*2;
-			if (ntimes > 20)
-				ntimes = 1;
-			go_backward(1, ntimes);
-		}	
-		sleep(2);
-		dist = get_distance(avg_heading.gps_lat, 
-						avg_heading.gps_lon);
-		diff_dist = req_distance - dist;
-		printf("distance = %f, ntimes = %d\n", dist, ntimes);		
-	}
-}
-
-
 
 void set_drone_heading(float ref) {
 	// ref: 0 = North, 90 = East, -90 = West, +-180 = South
@@ -430,67 +377,44 @@ void set_drone_heading(float ref) {
     printf("avg heading after %f\n", avg_heading);
 }
 
-float get_bearing(uint8_t waypoint_ptr)//return array with dist and bearing here instead maybe
+float get_bearing(uint8_t waypoint_ptr)
 {
-	float dest_lat = gps_points[waypoint_ptr].gps_lat*M_PI/180;
-	float dest_lon = gps_points[waypoint_ptr].gps_lon*M_PI/180;  
-	//printf("r_dest_lat: %f, r_dest_lon: %f, M_Pi: %f\n", dest_lat, dest_lon, M_PI);
+	float dest_lat, dest_lon;
+    float delta_lon, work_x, work_y;
+    
+    dest_lat = gps_points[waypoint_ptr].gps_lat * M_PI / 180,
+    dest_lon = gps_points[waypoint_ptr].gps_lon * M_PI / 180;  
 
-	nav_gps_heading_t avg_data;	
-	float avg_heading;	
-	float avg_lon;
-	float avg_lat;
-	
-	avg_data = get_avg_heading();
-	avg_heading = avg_data.heading;
-	avg_lon = avg_data.gps_lon;
-	avg_lat = avg_data.gps_lat;
-   	//printf("start_avg_lat: %f, start_avg_lon: %f\n", avg_lat, avg_lon);
-   	//convert to radians
-   	avg_lon = (avg_lon*M_PI)/180;
-   	avg_lat = (avg_lat*M_PI)/180;
-   	//printf("radians_avg_lat: %f, radians_avg_lon: %f\n", avg_lat, avg_lon);
+	update_gps_state();
+    avg_lat = gps_state.gps_lat * M_PI / 180;
+	avg_lon = gps_state.gps_lon * M_PI / 180;
 
-   	float delta_lon = dest_lon-avg_lon;
-  	//printf("delta lon: %f\n", delta_lon);
-  	float x = cos(avg_lat)*sin(dest_lat) - sin(avg_lat)*cos(dest_lat)*cos(delta_lon);
- 	float y = sin(delta_lon)*cos(dest_lat);
- 	//printf("x: %f, y: %f\n", x, y);
+   	delta_lon = dest_lon - avg_lon;
+  	work_x = cos(avg_lat) * sin(dest_lat) - 
+             sin(avg_lat) * cos(dest_lat) * cos(delta_lon);
+ 	work_y = sin(delta_lon) * cos(dest_lat);
  	
- 	float bearing = atan2(y,x)*180.0/M_PI;
-	printf("bearing %4.6f\n", bearing);
- 	return bearing;
-	
+ 	return atan2(work_y, work_x) * 180.0 / M_PI;
 }
 
 float get_distance(float gps_lat, float gps_lon)
 {
-	float dest_lat = gps_lat*M_PI/180;
-	float dest_lon = gps_lon*M_PI/180; 
+	float dest_lat = gps_lat*M_PI/180,
+          dest_lon = gps_lon*M_PI/180,
+          avg_lat, avg_lon;
+          
+    /** R - Earth's radius in Km
+     */
+    float R = 6371*1000, delta_lon;
 
-	//printf("r_dest_lat: %f, r_dest_lon: %f, M_Pi: %f\n", dest_lat, dest_lon, M_PI);
-
-	nav_gps_heading_t avg_data;	
-	float avg_heading;
-	float avg_lon;
-	float avg_lat;
-	avg_data = get_avg_heading();
-	avg_heading = avg_data.heading;
-	avg_lon = avg_data.gps_lon;
-	avg_lat = avg_data.gps_lat;
+    update_gps_state();
+    avg_lat = gps_state.gps_lat * M_PI / 180;
+	avg_lon = gps_state.gps_lon * M_PI / 180;
 	
-	//convert to radians
-   	avg_lon = (avg_lon*M_PI)/180;
-   	avg_lat = (avg_lat*M_PI)/180;
-   	//printf("radians_avg_lat: %f, radians_avg_lon: %f\n", avg_lat, avg_lon);
-
-  	float delta_lon = dest_lon-avg_lon;
-   	//printf("start_avg_lat: %f, start_avg_lon: %f\n", avg_lat, avg_lon);
-   	float R = 6371*1000;
- 	float d = acos(sin(avg_lat)*sin(dest_lat)+ cos(avg_lat)*cos(dest_lat)*cos(delta_lon))*R;
- 	printf("distance: %f\n", d);
 	
-	return d;
+  	delta_lon = dest_lon-avg_lon;
+   	return  acos( sin(avg_lat) * sin(dest_lat) + 
+                  cos(avg_lat) * cos(dest_lat) * cos(delta_lon) ) * R;
 }
 
 void clockwise_turn(float r_angle, float setpoint) {	

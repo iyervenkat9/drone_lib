@@ -22,6 +22,8 @@
 #define NAV_DATA_RESOLUTION  20
 #define MAX_WAYPOINTS 10
 
+/** Deprecated struct, not used anymore
+ */
 typedef struct _nav_gps_heading {
     float gps_lat;
     float gps_lon;
@@ -46,11 +48,11 @@ typedef struct _inertial_state {
 int lock_on;
 
 gps_coordinate_t gps_points[MAX_WAYPOINTS]; 
+gps_coordinate_t gps_data[GPS_STRUCT_MAX_ELEMENTS], gps_state;
 inertial_state_t inertial_state;
 
 uint8_t wptr, num_waypoints;
 
-nav_gps_heading_t gps_heading_info[GPS_STRUCT_MAX_ELEMENTS];
 float yaw_calibration_p, yaw_calibration_n;
 char navdata_buffer[NAV_BUFFER_SIZE];
 
@@ -634,7 +636,7 @@ void disable_navdata_print(uint8_t tagp);
 void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n);
 
 /** Fetch average GPS and heading values */
-nav_gps_heading_t get_avg_heading();
+void get_avg_heading();
 
 /** A simple controller that orients the drone heading in the 
  * direction 'ref' degrees from North. Positive values indicate 
@@ -645,13 +647,14 @@ void set_drone_heading(float ref);
 
 /** Compute GPS bearing and distance */
 float get_bearing(uint8_t waypoint_ptr);
+
+/** Compute distance between current location and the location
+ *  given by (gps_lat, gps_lon)
+ */
 float get_distance(float gps_lat, float gps_lon);
 
 /** Point to point navigation */
 void navigate_next(uint8_t waypoint_ptr);
-
-/** Travel a given distance with a heading ref */
-void travel_distance(float ref, float req_distance);
 
 /** Deprecated functions
  */
