@@ -20,10 +20,14 @@ void disable_navdata_print(uint8_t tagp) {
 void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n) {
     switch(tagp) {
         case ARDRONE_NAVDATA_DEMO_TAG:
-                ;nav_demo d;
-                memcpy(&d, (uint8_t *) n, minval(sizep, sizeof(nav_demo)));
-                // printf("battery: %u, thetha: %4.3f, phi: %4.3f, psi: %4.3f\n",
-                //         d.vbat_flying_percentage, d.theta, d.phi, d.psi);
+                demo_ptr = (nav_demo *) n;
+                inertial_state.psi_val = demo_ptr->psi;                
+                inertial_state.vx_val = demo_ptr->vx / 1000.0;
+                inertial_state.vy_val = demo_ptr->vy / 1000.0;
+                inertial_state.vz_val = demo_ptr->vz / 1000.0;
+                inertial_state.x_distance = inertial_state.x_distance 
+                                            + inertial_state.vx_val
+                                            * 0.005;
         break;
         case ARDRONE_NAVDATA_TIME_TAG:
         break;
@@ -44,9 +48,8 @@ void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n) {
         case ARDRONE_NAVDATA_PWM_TAG:
         break;
         case ARDRONE_NAVDATA_ALTITUDE_TAG:
-                ; altitude alt;
-                memcpy(&alt, (uint8_t *) n, minval(sizep, sizeof(altitude)));
-                // printf("obs_alt: %4.3f\n", alt.obs_alt);
+                altitude_ptr = (altitude *) n;        
+                
         break;
         case ARDRONE_NAVDATA_VISION_RAW_TAG:
         break;
@@ -71,18 +74,9 @@ void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n) {
         case ARDRONE_NAVDATA_PRESSURE_RAW_TAG:
         break;
         case ARDRONE_NAVDATA_MAGNETO_TAG:
-                ;magneto *mag = (magneto *) n;
-                // printf("magneto_x: %d, magneto_y: %d, magneto_z: %d, angle: %f, calib: %d\n", 
-                        // mag->mx, mag->my, mag->mz, atan2(1.0*(mag->my),mag->mx)*180.0/3.1416, mag->magneto_calibration_ok);
-//                printf("magneto_hd: %4.3f, magneto_gy: %4.3f, magneto_fu: %4.3f\n", 
-  //                    mag->heading_unwrapped, mag->heading_gyro_unwrapped, mag->heading_fusion_unwrapped);
-                gps_heading_info[struct_ptr].heading = mag->heading_unwrapped;
         break;
         case ARDRONE_NAVDATA_WIND_TAG:
-				;wind *wind_data = (wind *) n;
-				gps_heading_info[struct_ptr].wind_angle = wind_data->wind_angle;
-				gps_heading_info[struct_ptr].wind_speed = wind_data->wind_speed;
-        break;
+       break;
         case ARDRONE_NAVDATA_KALMAN_PRESSURE_TAG:
         break;
         case ARDRONE_NAVDATA_HDVIDEO_STREAM_TAG:
@@ -90,10 +84,10 @@ void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n) {
         case ARDRONE_NAVDATA_WIFI_TAG:
         break;  
         case ARDRONE_NAVDATA_GPS_TAG:
-            ;gps *gps_data = (gps *) n;
+            gps_ptr = (gps *) n;
             //printf("gps lat: %f, gps lon: %f, gps elevation %f\n", gps_data->lat, gps_data->lon, gps_data->elevation);
-            gps_heading_info[struct_ptr].gps_lat = gps_data->lat;
-            gps_heading_info[struct_ptr].gps_lon = gps_data->lon;
+            gps_heading_info[struct_ptr].gps_lat = gps_ptr->lat;
+            gps_heading_info[struct_ptr].gps_lon = gps_ptr->lon;
         break;
         case ARDRONE_NAVDATA_CKS_TAG:
         break;
@@ -232,43 +226,6 @@ void nav_read() {
 				//printf("avg gps lat = %4.6f, avg gps lon = %4.6f\n",
 						//avg_gps.gps_lat, avg_gps.gps_lon);
 		   //}
-       }
-	}
-}
-
-void nav_read_buf() {
-	int num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 
-		(struct sockaddr *) &navdata_info, sizeof(navdata_info));
-
-	int l = sizeof(navdata_info);
-	uint16_t cnt_size, sizep, tagp; 
-	memset(gps_heading_info, 0x00, sizeof(nav_gps_heading_t)*GPS_STRUCT_MAX_ELEMENTS);
-    struct_ptr = 0;
-	while (struct_ptr < GPS_STRUCT_MAX_ELEMENTS) {		
-		memset(navdata_buffer, 0x00, NAV_BUFFER_SIZE);
-		num_bytes = recvfrom(navsock, navdata_buffer, NAV_BUFFER_SIZE, 0, 
-			(struct sockaddr *) &navfrom, &l);
-		cnt_size = 0;
-		if (num_bytes > 0) {
-            uint8_t *ndata = (uint8_t *) (navdata_buffer);
-            cnt_size += 8;
-            ndata =  ((uint8_t *) ndata) + 0x10;
-
-            tagp = *((uint8_t *) ndata) + (*(((uint8_t *) ndata) + 1) << 8);
-            sizep = *(((uint8_t *) ndata) + 2) + (*(((uint8_t *) ndata) + 3) << 8);
-            while (cnt_size < sizeof(navdata_buffer) && (tagp != 0xffff)) {        
-                //printf("tag: %d, size: %d\n", tagp, sizep);
-                print_nav_data(tagp, sizep, (uint8_t *) ndata);
-                ndata = ((uint8_t *) ndata) + sizep;
-                cnt_size += sizep;
-                tagp = *((uint8_t *) ndata) + (*(((uint8_t *) ndata) + 1) << 8);
-                sizep = *(((uint8_t *) ndata) + 2) + (*(((uint8_t *) ndata) + 3) << 8);
-            }
-
-           fflush(stdout);
-           num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 
-            (struct sockaddr *) &navdata_info, sizeof(navdata_info));
-           struct_ptr = struct_ptr + 1;
        }
 	}
 }
@@ -595,36 +552,21 @@ float get_distance(float gps_lat, float gps_lon)
 	return d;
 }
 
-
-void clockwise(float r_angle, int ntimes) {	
-	float psi_old = psi_val, angle_measure = 0;
-	printf("psi_old = %f, psi_val = %f\n", psi_old, psi_val);
-	while (ntimes > 0) {
-		//rotate_right(r_angle);
-		usleep(50000);
-		if (psi_val >= psi_old)		
-			angle_measure = angle_measure + (psi_val - psi_old) / 1000.0;
-		else
-			angle_measure = angle_measure + 360 + (psi_val - psi_old) / 1000.0;
-			
-		psi_old = psi_val;
-		ntimes--;
-	}	
-	
-	printf("angle_measure clockwise = %f\n", angle_measure);
-}
-
 void clockwise_turn(float r_angle, float setpoint) {	
-	float psi_old = psi_val, angle_measure = 0;
+	float psi_old = inertial_state.psi_val;
+    float angle_measure = 0;
 	int ntimes = 100;
+    
 	while ((angle_measure < setpoint) && (ntimes > 0)) {
 		rotate_right(r_angle);
 		usleep(50000);
-		if (psi_val >= psi_old)		
-			angle_measure = angle_measure + (psi_val - psi_old) / 1000.0;
+		if (inertial_state.psi_val >= psi_old)		
+			angle_measure = angle_measure + 
+                            (inertial_state.psi_val - psi_old) / 1000.0;
 		else
-			angle_measure = angle_measure + 360 + (psi_val - psi_old) / 1000.0;
-		psi_old = psi_val;
+			angle_measure = angle_measure + 360 + 
+                            (inertial_state.psi_val - psi_old) / 1000.0;
+		psi_old = inertial_state.psi_val;
 		ntimes--;
 	}	
 	
@@ -633,16 +575,20 @@ void clockwise_turn(float r_angle, float setpoint) {
 }
 
 void anti_clockwise_turn(float l_angle, float setpoint) {
-	float psi_old = psi_val, angle_measure = 0;
+	float psi_old = inertial_state.psi_val;
+    float angle_measure = 0;
 	int ntimes = 100;
+    
 	while ((angle_measure < setpoint) && (ntimes > 0)) {
 		rotate_left(l_angle);
 		usleep(50000);
-		if (psi_old >= psi_val)
-			angle_measure = angle_measure + (psi_old - psi_val) / 1000.0;
+		if (psi_old >= inertial_state.psi_val)
+			angle_measure = angle_measure + 
+                            (psi_old - inertial_state.psi_val) / 1000.0;
 		else
-			angle_measure = angle_measure + 360 + (psi_old - psi_val) / 1000.0;
-		psi_old = psi_val;
+			angle_measure = angle_measure + 360 +
+                            (psi_old - inertial_state.psi_val) / 1000.0;
+		psi_old = inertial_state.psi_val;
 		ntimes--;
 	}
 	
@@ -651,54 +597,102 @@ void anti_clockwise_turn(float l_angle, float setpoint) {
 }
 
 
+void forward_distance(float r_tilt, float req_distance) {
+	int n_iter = 0, ntimes;
+	// Set to a random value
+	float derr = 0, 
+          prev_err = 0, 
+          err = 0, 
+          tilt_angle = 0;
+          
+    // Reset the inertial state
+	inertial_state.x_distance = 0;
+	
+	while ( (inertial_state.x_distance < req_distance) && 
+            (n_iter <= 50)) {
+                
+        err = ( req_distance - inertial_state.x_distance ) / 
+                req_distance;		
+		if (n_iter > 0)
+			derr = err - prev_err;
+		
+		// A simple PD controller, P coeff of 1 and a D coeff of 2.5
+		tilt_angle = 0.2*err + 2.5*derr;
+        
+		if ((tilt_angle < 0) || (tilt_angle > 1.0)) {
+			tilt_angle = 0.1;
+			break;
+		}
+		else				
+			tilt_forward(tilt_angle);
+		usleep(50000);
+		prev_err = err;
+		n_iter++;
+	}
+	sleep(2);
+	printf("done %f m, n_iter %d\n", 
+            inertial_state.x_distance, n_iter);
+}
+
+
+/**
+ * Deprecated, not used anymore
+ */
+void clockwise(float r_angle, int ntimes) {	
+	float psi_old = inertial_state.psi_val,
+          angle_measure = 0;
+	
+    while (ntimes > 0) {
+		rotate_right(r_angle);
+		usleep(50000);
+		if (inertial_state.psi_val >= psi_old)		
+			angle_measure = angle_measure +
+                            (inertial_state.psi_val - psi_old) / 1000.0;
+		else
+			angle_measure = angle_measure + 360 + 
+                            (inertial_state.psi_val - psi_old) / 1000.0;
+			
+		psi_old = inertial_state.psi_val;
+		ntimes--;
+	}	
+	
+	printf("angle_measure clockwise = %f\n", angle_measure);
+}
+
+
+/**
+ * Deprecated, not used anymore
+ */
 void anti_clockwise(float l_angle, int ntimes) {
-	float psi_old = psi_val, angle_measure = 0;
+	float psi_old = inertial_state.psi_val, 
+          angle_measure = 0;
+    
 	while (ntimes > 0) {
 		usleep(50000);
-		angle_measure = angle_measure + (psi_val - psi_old) / 1000.0;
-		psi_old = psi_val;
+		angle_measure = angle_measure + 
+                        (inertial_state.psi_val - psi_old) / 1000.0;
+		psi_old = inertial_state.psi_val;
 		ntimes--;
 	}
 	
 	printf("angle_measure counter-clockwise = %f\n", angle_measure);		
 }
 
-
+/**
+ * Deprecated, not used anymore
+ */
 void go_forward(float r_tilt, int ntimes) {
-	//x_distance = 0; 
-	lock_on = 1;
 	while (ntimes > 0) {
 		tilt_forward(r_tilt);
 		usleep(50000);					
 		ntimes--;
 	}
-	lock_on = 0;
 	usleep(500000);
 }
 
-void forward_distance(float r_tilt, float req_distance) {
-	int maxiter = 5, ntimes;
-	// Set to a random value
-	float distance_per_command = 0.07, alpha_coeff = 0.7, prev_dist;
-	x_distance = 0;
-	
-	while ((x_distance < req_distance) && (maxiter > 0)) {
-		prev_dist = x_distance;
-		ntimes = (2*((req_distance - x_distance) * alpha_coeff
-				 / distance_per_command) + 1) / 2;
-		if ((ntimes > 30) || (ntimes < 0)) {
-			ntimes = 5;
-			go_forward(r_tilt, ntimes);
-		}
-		else
-			go_forward(r_tilt, ntimes);
-		sleep(1);
-		distance_per_command = (x_distance - prev_dist) / ntimes;
-		maxiter--;
-	}
-	printf("done %f m\n", x_distance);
-}
-
+/**
+ * Deprecated, not used anymore
+ */
 void go_backward(float r_tilt, int ntimes) {
 	while (ntimes > 0) {
 		tilt_forward(r_tilt);

@@ -14,12 +14,6 @@ void * nav_thread(void *arg) {
 	return NULL;
 }
 
-
-void * fill_nav_buf(void *arg) {
-	nav_read_buf();
-	return NULL;
-}
-
 void * serial_read_thread(void *arg) {
 	serial_init();
 	serial_read();

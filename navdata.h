@@ -35,10 +35,19 @@ typedef struct _gps_coordinate {
 	float gps_lon;
 } gps_coordinate_t;
 
-float psi_val, vx_val, vy_val, vz_val, x_distance;
+typedef struct _inertial_state {
+    float psi_val;
+    float vx_val;
+    float vy_val;
+    float vz_val;
+    float x_distance;
+} inertial_state_t;
+
 int lock_on;
 
 gps_coordinate_t gps_points[MAX_WAYPOINTS]; 
+inertial_state_t inertial_state;
+
 uint8_t wptr, num_waypoints;
 
 nav_gps_heading_t gps_heading_info[GPS_STRUCT_MAX_ELEMENTS];
@@ -606,47 +615,57 @@ uint32_t navdata_tag_mask;
 struct sockaddr_in navsock_info, navdata_info, navfrom;
 #endif
 
-/* Initialize Navigation port */
+/**
+ * @brief Navdata pointers
+ */
+nav_demo *demo_ptr;
+altitude *altitude_ptr;
+gps      *gps_ptr;
+
+
+/** Initialize Navigation port */
 void nav_port_init();
 void nav_read();
-void nav_read_buf();
 
 
-/* Printing navigation data */
+/** Printing navigation data */
 void enable_navdata_print(uint8_t tagp);
 void disable_navdata_print(uint8_t tagp);
 void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n);
 
-/* Fetch average GPS and heading values */
+/** Fetch average GPS and heading values */
 nav_gps_heading_t get_avg_heading();
 
-/* A simple controller that orients the drone heading in the 
+/** A simple controller that orients the drone heading in the 
  * direction 'ref' degrees from North. Positive values indicate 
  * clockwise direction, while negative values denote anti-clockwise 
  * direction
  */
 void set_drone_heading(float ref);
-/* Calibrate yaw movements in both clockwise and anti-clockwise
+/** Calibrate yaw movements in both clockwise and anti-clockwise
  * directions for the heading controller
  */
 void calibrate_yaw();
 
-/* Compute GPS bearing and distance */
+/** Compute GPS bearing and distance */
 float get_bearing(uint8_t waypoint_ptr);
 float get_distance(float gps_lat, float gps_lon);
 
-/* Point to point navigation */
+/** Point to point navigation */
 void navigate_next(uint8_t waypoint_ptr);
 
-/* Travel a given distance with a heading ref */
+/** Travel a given distance with a heading ref */
 void travel_distance(float ref, float req_distance);
 
-
+/** Deprecated functions
+ */
 void clockwise(float r_angle, int ntimes);
 void anti_clockwise(float l_angle, int ntimes);
-void clockwise_turn(float r_angle, float setpoint);
-void anti_clockwise_turn(float l_angle, float setpoint);
 void go_forward(float r_tilt, int ntimes);
 void go_backward(float r_tilt, int ntimes);
-void forward_distance(float r_tilt, float req_distance);
 
+/** P-controller for heading, and P-D controller for pitching forward
+ */
+void clockwise_turn(float r_angle, float setpoint);
+void anti_clockwise_turn(float l_angle, float setpoint);
+void forward_distance(float r_tilt, float req_distance);
