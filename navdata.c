@@ -430,65 +430,6 @@ void set_drone_heading(float ref) {
     printf("avg heading after %f\n", avg_heading);
 }
 
-void calibrate_yaw() {
-#if FIXED_YAW
-	yaw_calibration_n = 25;
-	yaw_calibration_p = 25;
-#else
-	uint8_t cnt_loop = 0;
-	nav_gps_heading_t avg_data;
-	float heading[7], diff_heading[6], davg_heading = 0;
-	avg_data = get_avg_heading();
-	heading[cnt_loop] = avg_data.heading;
-	
-	while (cnt_loop < 3) {
-		printf("clock %d\n", cnt_loop+1);
-		clockwise(1,1);
-		cnt_loop++;
-		sleep(2);
-		avg_data = get_avg_heading();
-		heading[cnt_loop] = avg_data.heading;		
-		diff_heading[cnt_loop - 1] = heading[cnt_loop] - 
-									 heading[cnt_loop - 1];
-		if (diff_heading[cnt_loop - 1] < 0)
-			diff_heading[cnt_loop - 1] = -diff_heading[cnt_loop - 1];				
-	}
-	
-	while (cnt_loop < 6) {
-		anti_clockwise(1,1);
-		cnt_loop++;
-		sleep(2);
-		avg_data = get_avg_heading();
-		heading[cnt_loop] = avg_data.heading;		
-		diff_heading[cnt_loop - 1] = heading[cnt_loop] - 
-									 heading[cnt_loop - 1];
-		if (diff_heading[cnt_loop - 1] < 0)
-			diff_heading[cnt_loop - 1] = -diff_heading[cnt_loop - 1];				
-	}
-	
-	printf("Difference heading clockwise: ");
-	davg_heading = 0;
-	for (cnt_loop = 0; cnt_loop < 3; cnt_loop++) {
-		printf("%4.3f ", diff_heading[cnt_loop]);
-		davg_heading = davg_heading + diff_heading[cnt_loop];
-	}	
-	
-	yaw_calibration_p = davg_heading / 3;
-	 
-	
-	printf("Difference heading anticlockwise: ");
-	davg_heading = 0;
-	for (cnt_loop = 3; cnt_loop < 6; cnt_loop++) {
-		printf("%4.3f ", diff_heading[cnt_loop]);
-		davg_heading = davg_heading + diff_heading[cnt_loop];
-	}
-	
-	yaw_calibration_n = davg_heading / 3; 
-#endif		
-	printf("yaw_calibration_p: %f\n", yaw_calibration_p);
-	printf("yaw_calibration_n: %f\n", yaw_calibration_n);	
-}
-
 float get_bearing(uint8_t waypoint_ptr)//return array with dist and bearing here instead maybe
 {
 	float dest_lat = gps_points[waypoint_ptr].gps_lat*M_PI/180;

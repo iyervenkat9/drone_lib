@@ -642,10 +642,6 @@ nav_gps_heading_t get_avg_heading();
  * direction
  */
 void set_drone_heading(float ref);
-/** Calibrate yaw movements in both clockwise and anti-clockwise
- * directions for the heading controller
- */
-void calibrate_yaw();
 
 /** Compute GPS bearing and distance */
 float get_bearing(uint8_t waypoint_ptr);

@@ -21,7 +21,6 @@ else
 CCC = gcc
 CFLAGS+=-DON_PC=1
 endif 
-CFLAGS+=-DFIXED_YAW=1
 # library paths
 LIBS = -lm -lpthread
  
