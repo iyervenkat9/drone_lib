@@ -49,7 +49,7 @@ void main() {
 	{
 		printf("Created thread\n");
 		sleep(6);
-		calibrate_yaw();
+		//calibrate_yaw();
 		//test_leds();
 		//printf("test leds\n");
 		pthread_create(&serial_thread, NULL, serial_read_thread, NULL);

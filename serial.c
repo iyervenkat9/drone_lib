@@ -3,6 +3,8 @@
 #include "stdint.h"
 #include <time.h>
 
+extern gps_coordinate_t gps_state;
+
 void serial_init() {	
 	fd_set mask, smask;
 	serial_fd = open("/dev/ttyUSB1", O_RDWR | O_NOCTTY | O_NDELAY | O_SYNC);
@@ -96,7 +98,6 @@ void handle_serial_str() {
 		
 	time_t timer;
 	struct tm* tm_info;
-	nav_gps_heading_t avg_data;
 	char tmp_gps[30];
 
 	bad_data = 0;
@@ -104,10 +105,10 @@ void handle_serial_str() {
 	tm_info = localtime(&timer);
 
 	strftime(log_string, 27, "%Y:%m:%d:%H:%M:%S,", tm_info);
-	avg_data = get_avg_heading();
+	update_gps_state();
 	memset(tmp_gps, 0x00, 30);
 	sprintf(tmp_gps, "(%4.6f, %4.6f),", 
-		avg_data.gps_lat, avg_data.gps_lon);
+		gps_state.gps_lat, gps_state.gps_lon);
 	strncat(log_string, tmp_gps, strlen(tmp_gps));	
 	strncat(log_string, serial_buffer + 3, (strlen(serial_buffer)-3));			
 		

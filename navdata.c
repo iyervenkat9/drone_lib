@@ -219,13 +219,6 @@ void nav_read() {
            num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 
             (struct sockaddr *) &navdata_info, sizeof(navdata_info));
            struct_ptr = (struct_ptr + 1) % GPS_STRUCT_MAX_ELEMENTS;
-           //if (!struct_ptr)
-           //{
-				//nav_gps_heading_t avg_gps = get_avg_heading();
-				
-				//printf("avg gps lat = %4.6f, avg gps lon = %4.6f\n",
-						//avg_gps.gps_lat, avg_gps.gps_lon);
-		   //}
        }
 	}
 }
@@ -233,154 +226,101 @@ void nav_read() {
 void update_gps_state() {
     nav_gps_heading_t avg_gps_hd;
 
-    gps_state.avg_lon = 0;
-    gps_state.avg_lat = 0;
+    gps_state.gps_lon = 0;
+    gps_state.gps_lat = 0;
     uint8_t i;
 
     for (i = 0; i < GPS_STRUCT_MAX_ELEMENTS; i++) {
-        gps_state.avg_lon = gps_state.avg_lon + gps_data[i].gps_lon;
-        gps_state.avg_lat = gps_state.avg_lat + gps_data[i].gps_lat;
+        gps_state.gps_lon = gps_state.gps_lon + gps_data[i].gps_lon;
+        gps_state.gps_lat = gps_state.gps_lat + gps_data[i].gps_lat;
     }
-        
-
-    gps_state.avg_lon = gps_state.avg_lon*1.0 / GPS_STRUCT_MAX_ELEMENTS;
-    gps_state.avg_lat = gps_state.avg_lat*1.0 / GPS_STRUCT_MAX_ELEMENTS;
+    gps_state.gps_lon = gps_state.gps_lon*1.0 / GPS_STRUCT_MAX_ELEMENTS;
+    gps_state.gps_lat = gps_state.gps_lat*1.0 / GPS_STRUCT_MAX_ELEMENTS;
 }
 
 
 void navigate_next(uint8_t waypoint_ptr) {
 	int count = 0;
-	float dist = 1000.0;
+	float dist = 1000.0, gps_bearing;
 	wptr = waypoint_ptr;
 	dist = get_distance(gps_points[waypoint_ptr].gps_lat, 
 						gps_points[waypoint_ptr].gps_lon);
 	printf("Initial distance = %f\n", dist);
-	// 2 times - 1 m -- roughly
-	while (dist > 5.0 && count<7) {
+	
+	while (dist > 5.0 && count < 7) {
 		count++;		
-		float ref = get_bearing(waypoint_ptr);
-		set_drone_heading(ref);
-		int ntimes = dist*2;
-		go_forward(1,ntimes);
-		sleep(2);
+		gps_bearing = get_bearing(waypoint_ptr);        
+		set_drone_heading(gps_bearing);
+        
+        forward_distance(0.3, dist);
+        
+        update_gps_state();
 		dist = get_distance(gps_points[waypoint_ptr].gps_lat,
 							gps_points[waypoint_ptr].gps_lon);
-		printf("distance = %f, bearing = %f\n", dist, ref);		
 	}
 }
 
-void set_drone_heading(float ref) {
-	// ref: 0 = North, 90 = East, -90 = West, +-180 = South
-	float err_angle, intended_heading = ref;
-	nav_gps_heading_t avg_data;	
-	float avg_heading;
-
-	int count = 0;
-	int nr_times, clockwise_correction = 0;
-	avg_data = get_avg_heading();
-	avg_heading = avg_data.heading;
-	
-	//avg_heading = -40.102;
-
-	err_angle = intended_heading - avg_heading;
-	/* Get the sign of the error and the absolute value */
-	if (err_angle < 0)			
-		err_angle = -err_angle;
-	else
-		clockwise_correction = 1;
-
-
-    while (count < 3 && err_angle >= 3)
-    {
-    	count++;
-    	
-    	if (clockwise_correction == 1)
-			/* Check whether the drone needs to rotate more than once.
-			 * If so, determine nr_times from err_angle. 
-			 * If the drone is within 'yaw_calibration_p' degrees from 
-			 * the true value, then determine the fraction of full-scale
-			 * rotation
-			 */ 
-			if (err_angle > yaw_calibration_p)			
-			{			
-				nr_times =  err_angle / yaw_calibration_p;			
-				if (nr_times > 10)
-					nr_times = 1;
-				err_angle = intended_heading - avg_heading;	
-				printf("setpoint %4.3f: avg heading %4.3f: diff: %4.3f, nrtimes: %d\n",
-						intended_heading, avg_heading, err_angle, nr_times);
-						
-				clockwise(1.0, nr_times);				
-			}		
-			else					
-			{
-				float frac_angle = err_angle / yaw_calibration_p;				
-				err_angle = intended_heading - avg_heading;	
-				printf("setpoint %4.3f: avg heading %4.3f: diff: %4.3f, frac_angle: %4.3f\n",
-						intended_heading, avg_heading, err_angle, frac_angle);
-				clockwise(frac_angle, 1);
-			}
-		else
-			/* Check whether the drone needs to rotate more than once.
-			 * If so, determine nr_times from err_angle. 
-			 * If the drone is within 'yaw_calibration_n' degrees from 
-			 * the true value, then determine the fraction of full-scale
-			 * rotation
-			 */
-			if (err_angle > yaw_calibration_n)			//adjust nr_times
-			{			
-				nr_times =  err_angle/yaw_calibration_n;
-				if (nr_times > 10)
-					nr_times = 1;
-				//printf("err_angle = %f, yaw_calibration_n = %f\n", 
-				//		err_angle, yaw_calibration_n);
-				err_angle = intended_heading - avg_heading;	//tells which direction to go
-				printf("setpoint %4.3f: avg heading %4.3f: diff: %4.3f, nrtimes: %d\n",
-						intended_heading, avg_heading, err_angle, nr_times);
-						
-						
-				anti_clockwise(1.0, nr_times);
-			}		
-			else						//adjust rotation angle
-			{
-				float frac_angle = err_angle / yaw_calibration_n;
-		
-				err_angle = intended_heading - avg_heading;	//tells which direction to go
-				printf("setpoint %4.3f: avg heading %4.3f: diff: %4.3f, frac_angle: %4.3f\n",
-						intended_heading, avg_heading, err_angle, frac_angle);
-				
-				anti_clockwise(frac_angle, 1);
-			}
-
-		/* Get the heading value 
-		 * for the next round of control.
-		 * But sleep for a while to filter out 
-		 * the noisy sensor reads 
-		 * in the transient phase
-		 */
-		sleep(2);
-		avg_data = get_avg_heading();
-		avg_heading = avg_data.heading;
-		
-		/* Adjust reference to account for wind */
-		// intended_heading = get_bearing(wptr); 
-
-		err_angle = intended_heading - avg_heading;
-		if (err_angle < 0)			
-		{
-			err_angle = -err_angle;
-			clockwise_correction = 0;
-		}
-		else
-			clockwise_correction = 1;
-	}        
-    printf("avg heading after %f\n", avg_heading);
+void set_drone_heading(float bearing_angle) {
+    uint8_t case_turn;
+    float angle_tilt = 0.5;
+    
+    if ((inertial_state.psi_val > 0) && (bearing_angle > 0))
+        case_turn = 0;
+    else if ((inertial_state.psi_val <= 0) && (bearing_angle > 0))
+        case_turn = 1;
+    else if ((inertial_state.psi_val > 0) && (bearing_angle <= 0))
+        case_turn = 2;
+    else 
+        case_turn = 3;
+        
+    switch (case_turn) {
+        case 0:
+                if (inertial_state.psi_val < bearing_angle)
+                    clockwise_turn(angle_tilt, 
+                        bearing_angle - inertial_state.psi_val);
+                else
+                    anti_clockwise_turn(angle_tilt, 
+                        inertial_state.psi_val - bearing_angle);                                  
+        break;
+        
+        case 1:
+                if (bearing_angle - inertial_state.psi_val < 180)
+                    clockwise_turn(angle_tilt, 
+                        bearing_angle - inertial_state.psi_val);
+                else
+                    anti_clockwise_turn(angle_tilt, 360 +
+                        inertial_state.psi_val - bearing_angle);                                  
+        break;
+        
+        case 2:
+                if (bearing_angle + inertial_state.psi_val < 180)
+                    anti_clockwise_turn(angle_tilt, 
+                        bearing_angle - inertial_state.psi_val);
+                else
+                    clockwise_turn(angle_tilt, 360 -
+                        inertial_state.psi_val - bearing_angle);                                  
+        break;
+        
+        case 3:
+                 if (inertial_state.psi_val < bearing_angle)
+                    clockwise_turn(angle_tilt, 
+                        bearing_angle - inertial_state.psi_val);
+                else
+                    anti_clockwise_turn(angle_tilt, 
+                        inertial_state.psi_val - bearing_angle);
+        break;
+        
+        default:
+                    printf("Bad value %d\n", case_turn);
+    }
 }
 
 float get_bearing(uint8_t waypoint_ptr)
 {
 	float dest_lat, dest_lon;
-    float delta_lon, work_x, work_y;
+    float delta_lon, 
+          work_x, work_y, 
+          avg_lat, avg_lon;
     
     dest_lat = gps_points[waypoint_ptr].gps_lat * M_PI / 180,
     dest_lon = gps_points[waypoint_ptr].gps_lon * M_PI / 180;  

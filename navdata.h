@@ -48,7 +48,8 @@ typedef struct _inertial_state {
 int lock_on;
 
 gps_coordinate_t gps_points[MAX_WAYPOINTS]; 
-gps_coordinate_t gps_data[GPS_STRUCT_MAX_ELEMENTS], gps_state;
+gps_coordinate_t gps_data[GPS_STRUCT_MAX_ELEMENTS];
+gps_coordinate_t gps_state;
 inertial_state_t inertial_state;
 
 uint8_t wptr, num_waypoints;
@@ -635,15 +636,15 @@ void enable_navdata_print(uint8_t tagp);
 void disable_navdata_print(uint8_t tagp);
 void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n);
 
-/** Fetch average GPS and heading values */
-void get_avg_heading();
+/** Update average GPS values */
+void update_gps_state();
 
 /** A simple controller that orients the drone heading in the 
  * direction 'ref' degrees from North. Positive values indicate 
  * clockwise direction, while negative values denote anti-clockwise 
  * direction
  */
-void set_drone_heading(float ref);
+void set_drone_heading(float bearing_angle);
 
 /** Compute GPS bearing and distance */
 float get_bearing(uint8_t waypoint_ptr);
