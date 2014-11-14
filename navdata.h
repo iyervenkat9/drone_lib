@@ -639,9 +639,10 @@ void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n);
 /** Update average GPS values */
 void update_gps_state();
 
-/** A simple controller that orients the drone heading in the 
- * direction 'ref' degrees from North. Positive values indicate 
- * clockwise direction, while negative values denote anti-clockwise 
+/** Orient the drone heading in the 
+ * direction 'bearing_angle' degrees from North. 
+ * Positive values indicate clockwise direction, 
+ * while negative values denote anti-clockwise 
  * direction
  */
 void set_drone_heading(float bearing_angle);

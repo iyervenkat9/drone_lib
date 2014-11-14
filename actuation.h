@@ -24,12 +24,12 @@ int at_seq;
 char at_seq_str[6];
 struct sockaddr_in sock_info;
 pthread_mutex_t at_mutex;
-/* Initialize AT port for actuation */
+/** Initialize AT port for actuation */
 void register_actuation();
 void close_actuation();
 
 
-/* Actuation commands for yaw, pitch, roll 
+/** Actuation commands for yaw, pitch, roll 
  * and vertical movements
  */
 void vertical_down(float speed);
@@ -41,24 +41,23 @@ void tilt_right(float r_tilt);
 void tilt_forward(float r_tilt);
 void tilt_backward(float r_tilt);
 
-/* Actuation commands for continuous drone movements
- * over a longer time scale
+/** Deprecated functions, do not use them
  */ 
 void move_up(float speed, int ntimes);
 void move_down(float speed, int ntimes);
 void roll_left(float r_tilt, int ntimes);
 void roll_right(float r_tilt, int ntimes);
 
-/* AT commands for Takeoff and Landing */
+/** AT commands for Takeoff and Landing */
 void takeoff();
 void land();
 
-/* Calibrate Magnetometer reading */
+/** Calibrate Magnetometer reading */
 void calibrate_magneto();
 void flat_trim();
 void test_leds();
 
-/* Specify whether the user wants the 
+/** Specify whether the user wants the 
  * full navdata or only a demo
  */
 void set_navdata_options(char demo);
