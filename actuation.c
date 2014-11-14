@@ -79,7 +79,7 @@ void vertical_down(float speed) {
     sprintf(r_str, 
         "AT*PCMD_MAG=%d,1,0,0,%s,0,0,0\rAT*REF=%d,290718208\r",
         at_seq++, r_str_2, at_seq++);
-
+    
 	pthread_mutex_lock(&at_mutex);
 	int num_bytes = sendto(sockfd,r_str, strlen(r_str), 0, 
 		(struct sockaddr *) &sock_info, sizeof(sock_info));

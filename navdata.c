@@ -361,7 +361,7 @@ void clockwise_turn(float r_angle, float setpoint) {
 	float psi_old = inertial_state.psi_val;
     float angle_measure = 0;
 	int ntimes = 100;
-    
+
 	while ((angle_measure < setpoint) && (ntimes > 0)) {
 		rotate_right(r_angle);
 		usleep(50000);
@@ -405,10 +405,10 @@ void anti_clockwise_turn(float l_angle, float setpoint) {
 void forward_distance(float r_tilt, float req_distance) {
 	int n_iter = 0, ntimes;
 	// Set to a random value
-	float derr = 0, 
-          prev_err = 0, 
-          err = 0, 
-          tilt_angle = 0;
+	float   derr = 0, 
+            prev_err = 0, 
+            err = 0, 
+            tilt_angle = 0;
           
     // Reset the inertial state
 	inertial_state.x_distance = 0;
