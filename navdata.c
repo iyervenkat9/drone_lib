@@ -243,6 +243,11 @@ void navigate_next(uint8_t waypoint_ptr) {
                         gps_points[waypoint_ptr].gps_lon);
     printf("Initial distance = %f\n", dist);
     
+    /** Usually, one iteration should be enough. However, wind can cause
+     * the quadcopter to go off-course. For such cases, repeatedly check
+     * the distance, and change the bearing to get to the waypoint.
+     * We choose a maxium of 7 iterations
+     */
     while (dist > 5.0 && count < 7) {
         count++;        
         gps_bearing = get_bearing(gps_points[waypoint_ptr].gps_lat,
