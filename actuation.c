@@ -230,7 +230,6 @@ void close_actuation() {
 void set_navdata_options(char demo) {
     char nav_str[60];
     uint16_t num_bytes;
-    uint32_t nav_options_mask = 0;
 
     pthread_mutex_lock(&at_mutex);
     memset(nav_str, 0x00, sizeof(nav_str));

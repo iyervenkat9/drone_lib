@@ -612,7 +612,6 @@ enum ARDRONE_NAVDATA_TAG {
 
 
 int navsock;
-uint32_t navdata_tag_mask;
 struct sockaddr_in navsock_info, navdata_info, navfrom;
 #endif
 
