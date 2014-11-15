@@ -177,7 +177,8 @@ void nav_port_init() {
 
 
 void nav_read() {
-    uint16_t num_bytes, navsize = sizeof(navdata_info);
+    uint16_t num_bytes;
+    uint32_t navsize = sizeof(navdata_info);
     uint16_t cnt_size, sizep, tagp; 
     
     num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 

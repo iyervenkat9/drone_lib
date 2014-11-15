@@ -235,19 +235,19 @@ void set_navdata_options(char demo) {
     pthread_mutex_lock(&at_mutex);
     memset(nav_str, 0x00, sizeof(nav_str));
     if (demo)		
-        sprintf(nav_str, 
-				"AT*CONFIG=%d,\"general:navdata_demo\",\"TRUE\"\r",
-				at_seq++);	
+        sprintf(nav_str,
+                "AT*CONFIG=%d,\"general:navdata_demo\",\"TRUE\"\r",
+                at_seq++);	
 	else
 		sprintf(nav_str, 
-				"AT*CONFIG=%d,\"general:navdata_demo\",\"FALSE\"\r",
-				at_seq++);
+                "AT*CONFIG=%d,\"general:navdata_demo\",\"FALSE\"\r",
+                at_seq++);
+
+    num_bytes = sendto(sockfd, nav_str, strlen(nav_str), 0, 
+                (struct sockaddr *) &sock_info, sizeof(sock_info));
 	
-	num_bytes = sendto(sockfd, nav_str, strlen(nav_str), 0, 
-				   (struct sockaddr *) &sock_info, sizeof(sock_info));
-	
-	/** Enable only the GPS TAG from the Navdata, 
-     * along with the demo			   
+    /** Enable only the GPS TAG from the Navdata, 
+     *  along with the demo			   
      */
     if (!demo) {
         memset(nav_str, 0x00, sizeof(nav_str));
