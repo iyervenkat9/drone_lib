@@ -177,16 +177,17 @@ void nav_port_init() {
 
 
 void nav_read() {
-    int num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 
-        (struct sockaddr *) &navdata_info, sizeof(navdata_info));
-
-    int l = sizeof(navdata_info);
+    uint16_t num_bytes, navsize = sizeof(navdata_info);
     uint16_t cnt_size, sizep, tagp; 
+    
+    num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 
+        (struct sockaddr *) &navdata_info, sizeof(navdata_info));
+    
     struct_ptr = 0;
     while (1) {        
         memset(navdata_buffer, 0x00, NAV_BUFFER_SIZE);
         num_bytes = recvfrom(navsock, navdata_buffer, NAV_BUFFER_SIZE, 0, 
-            (struct sockaddr *) &navfrom, &l);
+            (struct sockaddr *) &navfrom, &navsize);
         
         cnt_size = 0;
         if ((num_bytes > 0)) {
@@ -236,7 +237,7 @@ void update_gps_state() {
 
 
 void navigate_next(uint8_t waypoint_ptr) {
-    int count = 0;
+    uint16_t n_iterations = 0;
     float dist = 1000.0, gps_bearing;
     wptr = waypoint_ptr;
     dist = get_distance(gps_points[waypoint_ptr].gps_lat, 
@@ -248,8 +249,8 @@ void navigate_next(uint8_t waypoint_ptr) {
      * the distance, and change the bearing to get to the waypoint.
      * We choose a maxium of 7 iterations
      */
-    while (dist > 5.0 && count < 7) {
-        count++;        
+    while (dist > 5.0 && n_iterations < 7) {
+        n_iterations++;        
         gps_bearing = get_bearing(gps_points[waypoint_ptr].gps_lat,
                                   gps_points[waypoint_ptr].gps_lon);        
         set_drone_heading(gps_bearing);
@@ -360,9 +361,10 @@ float get_distance(float gps_lat, float gps_lon)
 void clockwise_turn(float r_angle, float setpoint) {    
     float psi_old = inertial_state.psi_val;
     float angle_measure = 0;
-    int ntimes = 100;
+    uint16_t n_iterations = 0;
 
-    while ((angle_measure < setpoint) && (ntimes > 0)) {
+    while ((angle_measure < setpoint) && 
+           (n_iterations < MAX_ITERATIONS_YAW_CONTROL)) {
         rotate_right(r_angle);
         usleep(50000);
         if (inertial_state.psi_val >= psi_old)        
@@ -372,19 +374,20 @@ void clockwise_turn(float r_angle, float setpoint) {
             angle_measure = angle_measure + 360 + 
                             (inertial_state.psi_val - psi_old) / 1000.0;
         psi_old = inertial_state.psi_val;
-        ntimes--;
+        n_iterations++;
     }    
     
     printf("angle_measure clockwise = %f, ntimes = %d\n", 
-            angle_measure, 100-ntimes);
+            angle_measure, n_iterations);
 }
 
 void anti_clockwise_turn(float l_angle, float setpoint) {
     float psi_old = inertial_state.psi_val;
     float angle_measure = 0;
-    int ntimes = 100;
+    uint16_t n_iterations = 0;
     
-    while ((angle_measure < setpoint) && (ntimes > 0)) {
+    while ((angle_measure < setpoint) && 
+           (n_iterations < MAX_ITERATIONS_YAW_CONTROL)) {
         rotate_left(l_angle);
         usleep(50000);
         if (psi_old >= inertial_state.psi_val)
@@ -394,16 +397,16 @@ void anti_clockwise_turn(float l_angle, float setpoint) {
             angle_measure = angle_measure + 360 +
                             (psi_old - inertial_state.psi_val) / 1000.0;
         psi_old = inertial_state.psi_val;
-        ntimes--;
+        n_iterations++;
     }
     
     printf("angle_measure counter-clockwise = %f, ntimes = %d\n",
-            angle_measure, ntimes);        
+            angle_measure, n_iterations);        
 }
 
 
 void forward_distance(float r_tilt, float req_distance) {
-    int n_iter = 0, ntimes;
+    uint16_t n_iterations = 0, ntimes;
     // Set to a random value
     float   derr = 0, 
             prev_err = 0, 
@@ -414,11 +417,11 @@ void forward_distance(float r_tilt, float req_distance) {
     inertial_state.x_distance = 0;
     
     while ( (inertial_state.x_distance < req_distance) && 
-            (n_iter <= 50)) {
+            (n_iterations <= MAX_ITERATIONS_PITCH_CONTROL)) {
                 
         err = ( req_distance - inertial_state.x_distance ) / 
                 req_distance;        
-        if (n_iter > 0)
+        if (n_iterations > 0)
             derr = err - prev_err;
         
         // A simple PD controller, P coeff of 1 and a D coeff of 2.5
@@ -432,11 +435,11 @@ void forward_distance(float r_tilt, float req_distance) {
             tilt_forward(tilt_angle);
         usleep(50000);
         prev_err = err;
-        n_iter++;
+        n_iterations++;
     }
     sleep(2);
     printf("done %f m, n_iter %d\n", 
-            inertial_state.x_distance, n_iter);
+            inertial_state.x_distance, n_iterations);
 }
 
 

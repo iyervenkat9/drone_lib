@@ -20,6 +20,8 @@
 #define NAV_BUFFER_SIZE 3000
 #define GPS_STRUCT_MAX_ELEMENTS 20
 #define MAX_WAYPOINTS 10
+#define MAX_ITERATIONS_YAW_CONTROL 100
+#define MAX_ITERATIONS_PITCH_CONTROL 50
 
 /** Deprecated struct, not used anymore
  */
@@ -613,6 +615,7 @@ int navsock;
 uint32_t navdata_tag_mask;
 struct sockaddr_in navsock_info, navdata_info, navfrom;
 #endif
+
 
 /**
  * @brief Navdata pointers
