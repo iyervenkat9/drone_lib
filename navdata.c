@@ -98,107 +98,107 @@ void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n) {
 
 
 void nav_port_init() {
-	navsock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
-	memset(&navsock_info, 0, sizeof(navsock_info));
+    navsock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
+    memset(&navsock_info, 0, sizeof(navsock_info));
 
-	navsock_info.sin_family = AF_INET;
-#if ON_PC	
-	navsock_info.sin_port = htons(NAV_PORT);
+    navsock_info.sin_family = AF_INET;
+#if ON_PC    
+    navsock_info.sin_port = htons(NAV_PORT);
 #else
-	navsock_info.sin_port = htons(LOCAL_NAV_PORT);
+    navsock_info.sin_port = htons(LOCAL_NAV_PORT);
 #endif
-	navsock_info.sin_addr.s_addr = htonl(INADDR_ANY);
+    navsock_info.sin_addr.s_addr = htonl(INADDR_ANY);
 
-	if(bind(navsock, (struct sockaddr*) &navsock_info, 
-			sizeof(navsock_info)) == -1)
-	{
-		printf("could not bind navsocket\n");
-		close(navsock);
-		return;
-	}
-	printf("bind worked\n");
-	memset(&navdata_info, 0x00, sizeof(navdata_info));
-	navdata_info.sin_family = AF_INET;
-	navdata_info.sin_port = htons(NAV_PORT);
-	navdata_info.sin_addr.s_addr = inet_addr("192.168.1.3");
+    if(bind(navsock, (struct sockaddr*) &navsock_info, 
+            sizeof(navsock_info)) == -1)
+    {
+        printf("could not bind navsocket\n");
+        close(navsock);
+        return;
+    }
+    printf("bind worked\n");
+    memset(&navdata_info, 0x00, sizeof(navdata_info));
+    navdata_info.sin_family = AF_INET;
+    navdata_info.sin_port = htons(NAV_PORT);
+    navdata_info.sin_addr.s_addr = inet_addr("192.168.1.3");
 
-	int nav_datalen = sizeof(navdata_info);
-	printf("Initializing nav port\n");
-	// Initialize the Navigation port, send some commands
-	int num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 
-		(struct sockaddr *) &navdata_info, sizeof(navdata_info));
+    int nav_datalen = sizeof(navdata_info);
+    printf("Initializing nav port\n");
+    // Initialize the Navigation port, send some commands
+    int num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 
+        (struct sockaddr *) &navdata_info, sizeof(navdata_info));
 
-	if (num_bytes == -1) 
-		printf("can't initialize nav port - 1\n");
-	else	
-	{	
-		set_navdata_options(0);
-	}
+    if (num_bytes == -1) 
+        printf("can't initialize nav port - 1\n");
+    else    
+    {    
+        set_navdata_options(0);
+    }
 
-	enable_navdata_print(ARDRONE_NAVDATA_DEMO_TAG);
+    enable_navdata_print(ARDRONE_NAVDATA_DEMO_TAG);
     enable_navdata_print(ARDRONE_NAVDATA_GPS_TAG);
     enable_navdata_print(ARDRONE_NAVDATA_MAGNETO_TAG);
     
     /* Read Navigation waypoint data from file */
     char filebuffer[50], filechar;
 #if ON_PC
-	int fp = open("./waypoints.txt", O_RDONLY);
+    int fp = open("./waypoints.txt", O_RDONLY);
 #else
-	int fp = open("/data/video/waypoints.txt", O_RDONLY);
+    int fp = open("/data/video/waypoints.txt", O_RDONLY);
 #endif    
-	int retval = read(fp, &filechar, 1);
-	float gps_lat, gps_lon;
-	int i = 0, ptr = 0;
-	while (retval)
-	{
-		if (filechar == 0x0a || filechar == 0x0d)
-		{
-			filebuffer[ptr++] = filechar;
-			retval = sscanf(filebuffer, "%f,%f\n", &gps_lat, &gps_lon);
-			if (retval > 0) {
-				gps_points[i].gps_lat = gps_lat;
-				gps_points[i].gps_lon = gps_lon;
-				i++;
-				memset(filebuffer, 0x00, sizeof(filebuffer));
-				ptr = 0;
-			}
-		}
-		else
-			filebuffer[ptr++] = filechar;
-		
-		retval = read(fp, &filechar, 1);
-	}
-	
-	close(fp);
-	num_waypoints = i;
-	wptr = 0;
-	for (; i < MAX_WAYPOINTS; i++) {
-		gps_points[i].gps_lat = -1.0;
-		gps_points[i].gps_lon = -1.0;
-	}	
-	close(fp);
+    int retval = read(fp, &filechar, 1);
+    float gps_lat, gps_lon;
+    int i = 0, ptr = 0;
+    while (retval)
+    {
+        if (filechar == 0x0a || filechar == 0x0d)
+        {
+            filebuffer[ptr++] = filechar;
+            retval = sscanf(filebuffer, "%f,%f\n", &gps_lat, &gps_lon);
+            if (retval > 0) {
+                gps_points[i].gps_lat = gps_lat;
+                gps_points[i].gps_lon = gps_lon;
+                i++;
+                memset(filebuffer, 0x00, sizeof(filebuffer));
+                ptr = 0;
+            }
+        }
+        else
+            filebuffer[ptr++] = filechar;
+        
+        retval = read(fp, &filechar, 1);
+    }
+    
+    close(fp);
+    num_waypoints = i;
+    wptr = 0;
+    for (; i < MAX_WAYPOINTS; i++) {
+        gps_points[i].gps_lat = -1.0;
+        gps_points[i].gps_lon = -1.0;
+    }    
+    close(fp);
 
     pthread_mutex_init(&gps_heading_mutex, NULL);
 }
 
 
 void nav_read() {
-	int num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 
-		(struct sockaddr *) &navdata_info, sizeof(navdata_info));
+    int num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 
+        (struct sockaddr *) &navdata_info, sizeof(navdata_info));
 
-	int l = sizeof(navdata_info);
-	uint16_t cnt_size, sizep, tagp; 
+    int l = sizeof(navdata_info);
+    uint16_t cnt_size, sizep, tagp; 
     struct_ptr = 0; nav_resolution_ptr = 0;
-	while (1) {		
-		memset(navdata_buffer, 0x00, NAV_BUFFER_SIZE);
-		num_bytes = recvfrom(navsock, navdata_buffer, NAV_BUFFER_SIZE, 0, 
-			(struct sockaddr *) &navfrom, &l);
-		/* Added in a filter to sample nav data 
-		 * every 100 ms approximately
-		 */
-		nav_resolution_ptr = (nav_resolution_ptr + 1) % NAV_DATA_RESOLUTION;
-		cnt_size = 0;
-		if ((num_bytes > 0) && !nav_resolution_ptr) {
+    while (1) {        
+        memset(navdata_buffer, 0x00, NAV_BUFFER_SIZE);
+        num_bytes = recvfrom(navsock, navdata_buffer, NAV_BUFFER_SIZE, 0, 
+            (struct sockaddr *) &navfrom, &l);
+        /* Added in a filter to sample nav data 
+         * every 100 ms approximately
+         */
+        nav_resolution_ptr = (nav_resolution_ptr + 1) % NAV_DATA_RESOLUTION;
+        cnt_size = 0;
+        if ((num_bytes > 0) && !nav_resolution_ptr) {
             uint8_t *ndata = (uint8_t *) (navdata_buffer);
             cnt_size += 8;
             ndata =  ((uint8_t *) ndata) + 0x10;
@@ -212,15 +212,15 @@ void nav_read() {
                 tagp = *((uint8_t *) ndata) + (*(((uint8_t *) ndata) + 1) << 8);
                 sizep = *(((uint8_t *) ndata) + 2) + (*(((uint8_t *) ndata) + 3) << 8);
             }
-			
-				
-		
+            
+                
+        
            fflush(stdout);
            num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 
             (struct sockaddr *) &navdata_info, sizeof(navdata_info));
            struct_ptr = (struct_ptr + 1) % GPS_STRUCT_MAX_ELEMENTS;
        }
-	}
+    }
 }
 
 void update_gps_state() {
@@ -240,24 +240,24 @@ void update_gps_state() {
 
 
 void navigate_next(uint8_t waypoint_ptr) {
-	int count = 0;
-	float dist = 1000.0, gps_bearing;
-	wptr = waypoint_ptr;
-	dist = get_distance(gps_points[waypoint_ptr].gps_lat, 
-						gps_points[waypoint_ptr].gps_lon);
-	printf("Initial distance = %f\n", dist);
-	
-	while (dist > 5.0 && count < 7) {
-		count++;		
-		gps_bearing = get_bearing(waypoint_ptr);        
-		set_drone_heading(gps_bearing);
+    int count = 0;
+    float dist = 1000.0, gps_bearing;
+    wptr = waypoint_ptr;
+    dist = get_distance(gps_points[waypoint_ptr].gps_lat, 
+                        gps_points[waypoint_ptr].gps_lon);
+    printf("Initial distance = %f\n", dist);
+    
+    while (dist > 5.0 && count < 7) {
+        count++;        
+        gps_bearing = get_bearing(waypoint_ptr);        
+        set_drone_heading(gps_bearing);
         
         forward_distance(0.3, dist);
         
         update_gps_state();
-		dist = get_distance(gps_points[waypoint_ptr].gps_lat,
-							gps_points[waypoint_ptr].gps_lon);
-	}
+        dist = get_distance(gps_points[waypoint_ptr].gps_lat,
+                            gps_points[waypoint_ptr].gps_lon);
+    }
 }
 
 void set_drone_heading(float bearing_angle) {
@@ -317,7 +317,7 @@ void set_drone_heading(float bearing_angle) {
 
 float get_bearing(uint8_t waypoint_ptr)
 {
-	float dest_lat, dest_lon;
+    float dest_lat, dest_lon;
     float delta_lon, 
           work_x, work_y, 
           avg_lat, avg_lon;
@@ -325,21 +325,21 @@ float get_bearing(uint8_t waypoint_ptr)
     dest_lat = gps_points[waypoint_ptr].gps_lat * M_PI / 180,
     dest_lon = gps_points[waypoint_ptr].gps_lon * M_PI / 180;  
 
-	update_gps_state();
+    update_gps_state();
     avg_lat = gps_state.gps_lat * M_PI / 180;
-	avg_lon = gps_state.gps_lon * M_PI / 180;
+    avg_lon = gps_state.gps_lon * M_PI / 180;
 
-   	delta_lon = dest_lon - avg_lon;
-  	work_x = cos(avg_lat) * sin(dest_lat) - 
+       delta_lon = dest_lon - avg_lon;
+      work_x = cos(avg_lat) * sin(dest_lat) - 
              sin(avg_lat) * cos(dest_lat) * cos(delta_lon);
- 	work_y = sin(delta_lon) * cos(dest_lat);
- 	
- 	return atan2(work_y, work_x) * 180.0 / M_PI;
+     work_y = sin(delta_lon) * cos(dest_lat);
+     
+     return atan2(work_y, work_x) * 180.0 / M_PI;
 }
 
 float get_distance(float gps_lat, float gps_lon)
 {
-	float dest_lat = gps_lat*M_PI/180,
+    float dest_lat = gps_lat*M_PI/180,
           dest_lon = gps_lon*M_PI/180,
           avg_lat, avg_lon;
           
@@ -349,93 +349,93 @@ float get_distance(float gps_lat, float gps_lon)
 
     update_gps_state();
     avg_lat = gps_state.gps_lat * M_PI / 180;
-	avg_lon = gps_state.gps_lon * M_PI / 180;
-	
-	
-  	delta_lon = dest_lon-avg_lon;
-   	return  acos( sin(avg_lat) * sin(dest_lat) + 
+    avg_lon = gps_state.gps_lon * M_PI / 180;
+    
+    
+      delta_lon = dest_lon-avg_lon;
+       return  acos( sin(avg_lat) * sin(dest_lat) + 
                   cos(avg_lat) * cos(dest_lat) * cos(delta_lon) ) * R;
 }
 
-void clockwise_turn(float r_angle, float setpoint) {	
-	float psi_old = inertial_state.psi_val;
+void clockwise_turn(float r_angle, float setpoint) {    
+    float psi_old = inertial_state.psi_val;
     float angle_measure = 0;
-	int ntimes = 100;
+    int ntimes = 100;
 
-	while ((angle_measure < setpoint) && (ntimes > 0)) {
-		rotate_right(r_angle);
-		usleep(50000);
-		if (inertial_state.psi_val >= psi_old)		
-			angle_measure = angle_measure + 
+    while ((angle_measure < setpoint) && (ntimes > 0)) {
+        rotate_right(r_angle);
+        usleep(50000);
+        if (inertial_state.psi_val >= psi_old)        
+            angle_measure = angle_measure + 
                             (inertial_state.psi_val - psi_old) / 1000.0;
-		else
-			angle_measure = angle_measure + 360 + 
+        else
+            angle_measure = angle_measure + 360 + 
                             (inertial_state.psi_val - psi_old) / 1000.0;
-		psi_old = inertial_state.psi_val;
-		ntimes--;
-	}	
-	
-	printf("angle_measure clockwise = %f, ntimes = %d\n", 
-			angle_measure, 100-ntimes);
+        psi_old = inertial_state.psi_val;
+        ntimes--;
+    }    
+    
+    printf("angle_measure clockwise = %f, ntimes = %d\n", 
+            angle_measure, 100-ntimes);
 }
 
 void anti_clockwise_turn(float l_angle, float setpoint) {
-	float psi_old = inertial_state.psi_val;
+    float psi_old = inertial_state.psi_val;
     float angle_measure = 0;
-	int ntimes = 100;
+    int ntimes = 100;
     
-	while ((angle_measure < setpoint) && (ntimes > 0)) {
-		rotate_left(l_angle);
-		usleep(50000);
-		if (psi_old >= inertial_state.psi_val)
-			angle_measure = angle_measure + 
+    while ((angle_measure < setpoint) && (ntimes > 0)) {
+        rotate_left(l_angle);
+        usleep(50000);
+        if (psi_old >= inertial_state.psi_val)
+            angle_measure = angle_measure + 
                             (psi_old - inertial_state.psi_val) / 1000.0;
-		else
-			angle_measure = angle_measure + 360 +
+        else
+            angle_measure = angle_measure + 360 +
                             (psi_old - inertial_state.psi_val) / 1000.0;
-		psi_old = inertial_state.psi_val;
-		ntimes--;
-	}
-	
-	printf("angle_measure counter-clockwise = %f, ntimes = %d\n",
-			angle_measure, ntimes);		
+        psi_old = inertial_state.psi_val;
+        ntimes--;
+    }
+    
+    printf("angle_measure counter-clockwise = %f, ntimes = %d\n",
+            angle_measure, ntimes);        
 }
 
 
 void forward_distance(float r_tilt, float req_distance) {
-	int n_iter = 0, ntimes;
-	// Set to a random value
-	float   derr = 0, 
+    int n_iter = 0, ntimes;
+    // Set to a random value
+    float   derr = 0, 
             prev_err = 0, 
             err = 0, 
             tilt_angle = 0;
           
     // Reset the inertial state
-	inertial_state.x_distance = 0;
-	
-	while ( (inertial_state.x_distance < req_distance) && 
+    inertial_state.x_distance = 0;
+    
+    while ( (inertial_state.x_distance < req_distance) && 
             (n_iter <= 50)) {
                 
         err = ( req_distance - inertial_state.x_distance ) / 
-                req_distance;		
-		if (n_iter > 0)
-			derr = err - prev_err;
-		
-		// A simple PD controller, P coeff of 1 and a D coeff of 2.5
-		tilt_angle = 0.2*err + 2.5*derr;
+                req_distance;        
+        if (n_iter > 0)
+            derr = err - prev_err;
         
-		if ((tilt_angle < 0) || (tilt_angle > 1.0)) {
-			tilt_angle = 0.1;
-			break;
-		}
-		else				
-			tilt_forward(tilt_angle);
-		usleep(50000);
-		prev_err = err;
-		n_iter++;
-	}
-	sleep(2);
-	printf("done %f m, n_iter %d\n", 
+        // A simple PD controller, P coeff of 1 and a D coeff of 2.5
+        tilt_angle = 0.2*err + 2.5*derr;
+        
+        if ((tilt_angle < 0) || (tilt_angle > 1.0)) {
+            tilt_angle = 0.1;
+            break;
+        }
+        else                
+            tilt_forward(tilt_angle);
+        usleep(50000);
+        prev_err = err;
+        n_iter++;
+    }
+    sleep(2);
+    printf("done %f m, n_iter %d\n", 
             inertial_state.x_distance, n_iter);
 }
 
@@ -443,25 +443,25 @@ void forward_distance(float r_tilt, float req_distance) {
 /**
  * Deprecated, not used anymore
  */
-void clockwise(float r_angle, int ntimes) {	
-	float psi_old = inertial_state.psi_val,
+void clockwise(float r_angle, int ntimes) {    
+    float psi_old = inertial_state.psi_val,
           angle_measure = 0;
-	
+    
     while (ntimes > 0) {
-		rotate_right(r_angle);
-		usleep(50000);
-		if (inertial_state.psi_val >= psi_old)		
-			angle_measure = angle_measure +
+        rotate_right(r_angle);
+        usleep(50000);
+        if (inertial_state.psi_val >= psi_old)        
+            angle_measure = angle_measure +
                             (inertial_state.psi_val - psi_old) / 1000.0;
-		else
-			angle_measure = angle_measure + 360 + 
+        else
+            angle_measure = angle_measure + 360 + 
                             (inertial_state.psi_val - psi_old) / 1000.0;
-			
-		psi_old = inertial_state.psi_val;
-		ntimes--;
-	}	
-	
-	printf("angle_measure clockwise = %f\n", angle_measure);
+            
+        psi_old = inertial_state.psi_val;
+        ntimes--;
+    }    
+    
+    printf("angle_measure clockwise = %f\n", angle_measure);
 }
 
 
@@ -469,39 +469,39 @@ void clockwise(float r_angle, int ntimes) {
  * Deprecated, not used anymore
  */
 void anti_clockwise(float l_angle, int ntimes) {
-	float psi_old = inertial_state.psi_val, 
+    float psi_old = inertial_state.psi_val, 
           angle_measure = 0;
     
-	while (ntimes > 0) {
-		usleep(50000);
-		angle_measure = angle_measure + 
+    while (ntimes > 0) {
+        usleep(50000);
+        angle_measure = angle_measure + 
                         (inertial_state.psi_val - psi_old) / 1000.0;
-		psi_old = inertial_state.psi_val;
-		ntimes--;
-	}
-	
-	printf("angle_measure counter-clockwise = %f\n", angle_measure);		
+        psi_old = inertial_state.psi_val;
+        ntimes--;
+    }
+    
+    printf("angle_measure counter-clockwise = %f\n", angle_measure);        
 }
 
 /**
  * Deprecated, not used anymore
  */
 void go_forward(float r_tilt, int ntimes) {
-	while (ntimes > 0) {
-		tilt_forward(r_tilt);
-		usleep(50000);					
-		ntimes--;
-	}
-	usleep(500000);
+    while (ntimes > 0) {
+        tilt_forward(r_tilt);
+        usleep(50000);                    
+        ntimes--;
+    }
+    usleep(500000);
 }
 
 /**
  * Deprecated, not used anymore
  */
 void go_backward(float r_tilt, int ntimes) {
-	while (ntimes > 0) {
-		tilt_forward(r_tilt);
-		usleep(50000);
-		ntimes--;
-	}
+    while (ntimes > 0) {
+        tilt_forward(r_tilt);
+        usleep(50000);
+        ntimes--;
+    }
 }
