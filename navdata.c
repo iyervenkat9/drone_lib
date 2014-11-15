@@ -182,33 +182,34 @@ void nav_read() {
 
     int l = sizeof(navdata_info);
     uint16_t cnt_size, sizep, tagp; 
-    struct_ptr = 0; nav_resolution_ptr = 0;
+    struct_ptr = 0;
     while (1) {        
         memset(navdata_buffer, 0x00, NAV_BUFFER_SIZE);
         num_bytes = recvfrom(navsock, navdata_buffer, NAV_BUFFER_SIZE, 0, 
             (struct sockaddr *) &navfrom, &l);
-        /* Added in a filter to sample nav data 
-         * every 100 ms approximately
-         */
-        nav_resolution_ptr = (nav_resolution_ptr + 1) % NAV_DATA_RESOLUTION;
+        
         cnt_size = 0;
-        if ((num_bytes > 0) && !nav_resolution_ptr) {
+        if ((num_bytes > 0)) {
             uint8_t *ndata = (uint8_t *) (navdata_buffer);
             cnt_size += 8;
             ndata =  ((uint8_t *) ndata) + 0x10;
 
-            tagp = *((uint8_t *) ndata) + (*(((uint8_t *) ndata) + 1) << 8);
-            sizep = *(((uint8_t *) ndata) + 2) + (*(((uint8_t *) ndata) + 3) << 8);
-            while (cnt_size < sizeof(navdata_buffer) && (tagp != 0xffff)) {        
+            tagp = *((uint8_t *) ndata) + 
+                    (*(((uint8_t *) ndata) + 1) << 8);
+            sizep = *(((uint8_t *) ndata) + 2) + 
+                    (*(((uint8_t *) ndata) + 3) << 8);
+
+            while (cnt_size < sizeof(navdata_buffer) && 
+                    (tagp != 0xffff)) {        
                 print_nav_data(tagp, sizep, (uint8_t *) ndata);
                 ndata = ((uint8_t *) ndata) + sizep;
                 cnt_size += sizep;
-                tagp = *((uint8_t *) ndata) + (*(((uint8_t *) ndata) + 1) << 8);
-                sizep = *(((uint8_t *) ndata) + 2) + (*(((uint8_t *) ndata) + 3) << 8);
+                tagp = *((uint8_t *) ndata) + 
+                        (*(((uint8_t *) ndata) + 1) << 8);
+                sizep = *(((uint8_t *) ndata) + 2) + 
+                        (*(((uint8_t *) ndata) + 3) << 8);
             }
             
-                
-        
            fflush(stdout);
            num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 
             (struct sockaddr *) &navdata_info, sizeof(navdata_info));

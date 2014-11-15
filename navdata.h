@@ -19,7 +19,6 @@
 #define LOCAL_NAV_PORT 15554
 #define NAV_BUFFER_SIZE 3000
 #define GPS_STRUCT_MAX_ELEMENTS 20
-#define NAV_DATA_RESOLUTION  20
 #define MAX_WAYPOINTS 10
 
 /** Deprecated struct, not used anymore
@@ -45,8 +44,6 @@ typedef struct _inertial_state {
     float x_distance;
 } inertial_state_t;
 
-int lock_on;
-
 gps_coordinate_t gps_points[MAX_WAYPOINTS]; 
 gps_coordinate_t gps_data[GPS_STRUCT_MAX_ELEMENTS];
 gps_coordinate_t gps_state;
@@ -54,12 +51,11 @@ inertial_state_t inertial_state;
 
 uint8_t wptr, num_waypoints;
 
-float yaw_calibration_p, yaw_calibration_n;
 char navdata_buffer[NAV_BUFFER_SIZE];
 
 #define bool int32_t
 
-uint16_t struct_ptr, nav_resolution_ptr;
+uint16_t struct_ptr;
 pthread_mutex_t gps_heading_mutex;
 
 /**
