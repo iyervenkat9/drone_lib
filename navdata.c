@@ -407,13 +407,12 @@ void anti_clockwise_turn(float l_angle, float setpoint) {
 
 void forward_distance(float r_tilt, float req_distance) {
     uint16_t n_iterations = 0, ntimes;
-    // Set to a random value
     float   derr = 0, 
             prev_err = 0, 
             err = 0, 
             tilt_angle = 0;
           
-    // Reset the inertial state
+    /** Reset the inertial state */
     inertial_state.x_distance = 0;
     
     while ( (inertial_state.x_distance < req_distance) && 
@@ -424,7 +423,9 @@ void forward_distance(float r_tilt, float req_distance) {
         if (n_iterations > 0)
             derr = err - prev_err;
         
-        // A simple PD controller, P coeff of 1 and a D coeff of 2.5
+        /** A PD controller with P coeff of 1
+         *  and a D coeff of 2.5
+         */
         tilt_angle = 0.2*err + 2.5*derr;
         
         if ((tilt_angle < 0) || (tilt_angle > 1.0)) {
