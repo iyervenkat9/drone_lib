@@ -228,18 +228,37 @@ void close_actuation() {
 }
 
 void set_navdata_options(char demo) {
-    char navconfig_full[] = "AT*CONFIG=1,\"general:navdata_demo\",\"FALSE\"\r";
-    char navconfig_demo[] = "AT*CONFIG=1,\"general:navdata_demo\",\"TRUE\"\r";
+    char nav_str[60];
+    uint16_t num_bytes;
+    uint32_t nav_options_mask = 0;
 
     pthread_mutex_lock(&at_mutex);
-    if (demo) {
-        int num_bytes = sendto(sockfd, navconfig_demo, sizeof(navconfig_demo)-1, 0, 
-                (struct sockaddr *) &sock_info, sizeof(sock_info));
-    } 
-    else {
-        int num_bytes = sendto(sockfd, navconfig_full, sizeof(navconfig_full)-1, 0, 
-                (struct sockaddr *) &sock_info, sizeof(sock_info));    
+    memset(nav_str, 0x00, sizeof(nav_str));
+    if (demo)		
+        sprintf(nav_str, 
+				"AT*CONFIG=%d,\"general:navdata_demo\",\"TRUE\"\r",
+				at_seq++);	
+	else
+		sprintf(nav_str, 
+				"AT*CONFIG=%d,\"general:navdata_demo\",\"FALSE\"\r",
+				at_seq++);
+	
+	num_bytes = sendto(sockfd, nav_str, strlen(nav_str), 0, 
+				   (struct sockaddr *) &sock_info, sizeof(sock_info));
+	
+	/** Enable only the GPS TAG from the Navdata, 
+     * along with the demo			   
+     */
+    if (!demo) {
+        memset(nav_str, 0x00, sizeof(nav_str));
+        sprintf(nav_str, 
+                "AT*CONFIG=%d,\"general:navdata_options\",\"134217729\"\r",
+                at_seq++);
+        num_bytes = sendto(sockfd, nav_str, strlen(nav_str), 0, 
+                    (struct sockaddr *) &sock_info, sizeof(sock_info));
     }
+
+
     pthread_mutex_unlock(&at_mutex);
 }
 
