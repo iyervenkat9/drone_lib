@@ -632,8 +632,6 @@ void nav_read();
 
 
 /** Printing navigation data */
-void enable_navdata_print(uint8_t tagp);
-void disable_navdata_print(uint8_t tagp);
 void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n);
 
 /** Update average GPS values */

@@ -9,13 +9,6 @@ static uint16_t minval(uint16_t a, uint16_t b) {
     else       return b;
 }
 
-void enable_navdata_print(uint8_t tagp) {
-    navdata_tag_mask |= ((uint32_t) 1) << tagp;
-}
-
-void disable_navdata_print(uint8_t tagp) {
-    navdata_tag_mask ^= ((uint32_t) 1) << tagp;
-}
 
 void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n) {
     switch(tagp) {
@@ -85,7 +78,6 @@ void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n) {
         break;  
         case ARDRONE_NAVDATA_GPS_TAG:
             gps_ptr = (gps *) n;
-            //printf("gps lat: %f, gps lon: %f, gps elevation %f\n", gps_data->lat, gps_data->lon, gps_data->elevation);
             gps_data[struct_ptr].gps_lat = gps_ptr->lat;
             gps_data[struct_ptr].gps_lon = gps_ptr->lon;
         break;
@@ -98,6 +90,13 @@ void print_nav_data(uint16_t tagp, uint16_t sizep, uint8_t *n) {
 
 
 void nav_port_init() {
+    /** Read Navigation waypoint data from file */
+    char filebuffer[50], filechar;
+    /** variables for file and socket read */
+    uint16_t nav_datalen, fp, num_bytes, retval;
+    uint16_t i = 0, ptr = 0;
+    float gps_lat, gps_lon;
+    
     navsock = socket(AF_INET, SOCK_DGRAM | SOCK_NONBLOCK, IPPROTO_UDP);
     memset(&navsock_info, 0, sizeof(navsock_info));
 
@@ -122,10 +121,12 @@ void nav_port_init() {
     navdata_info.sin_port = htons(NAV_PORT);
     navdata_info.sin_addr.s_addr = inet_addr("192.168.1.3");
 
-    int nav_datalen = sizeof(navdata_info);
+    nav_datalen = sizeof(navdata_info);
     printf("Initializing nav port\n");
-    // Initialize the Navigation port, send some commands
-    int num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 
+    /** Initialize the Navigation port, 
+     * send some commands
+     */
+    num_bytes = sendto(navsock, nav_init, sizeof(nav_init), 0, 
         (struct sockaddr *) &navdata_info, sizeof(navdata_info));
 
     if (num_bytes == -1) 
@@ -134,21 +135,14 @@ void nav_port_init() {
     {    
         set_navdata_options(0);
     }
-
-    enable_navdata_print(ARDRONE_NAVDATA_DEMO_TAG);
-    enable_navdata_print(ARDRONE_NAVDATA_GPS_TAG);
-    enable_navdata_print(ARDRONE_NAVDATA_MAGNETO_TAG);
     
-    /* Read Navigation waypoint data from file */
-    char filebuffer[50], filechar;
 #if ON_PC
-    int fp = open("./waypoints.txt", O_RDONLY);
+    fp = open("./waypoints.txt", O_RDONLY);
 #else
-    int fp = open("/data/video/waypoints.txt", O_RDONLY);
+    fp = open("/data/video/waypoints.txt", O_RDONLY);
 #endif    
-    int retval = read(fp, &filechar, 1);
-    float gps_lat, gps_lon;
-    int i = 0, ptr = 0;
+    retval = read(fp, &filechar, 1);
+    
     while (retval)
     {
         if (filechar == 0x0a || filechar == 0x0d)
@@ -225,10 +219,11 @@ void nav_read() {
 
 void update_gps_state() {
     nav_gps_heading_t avg_gps_hd;
-
+    uint8_t i;
+    
     gps_state.gps_lon = 0;
     gps_state.gps_lat = 0;
-    uint8_t i;
+    
 
     for (i = 0; i < GPS_STRUCT_MAX_ELEMENTS; i++) {
         gps_state.gps_lon = gps_state.gps_lon + gps_data[i].gps_lon;
@@ -329,12 +324,12 @@ float get_bearing(uint8_t waypoint_ptr)
     avg_lat = gps_state.gps_lat * M_PI / 180;
     avg_lon = gps_state.gps_lon * M_PI / 180;
 
-       delta_lon = dest_lon - avg_lon;
-      work_x = cos(avg_lat) * sin(dest_lat) - 
+    delta_lon = dest_lon - avg_lon;
+    work_x = cos(avg_lat) * sin(dest_lat) - 
              sin(avg_lat) * cos(dest_lat) * cos(delta_lon);
-     work_y = sin(delta_lon) * cos(dest_lat);
+    work_y = sin(delta_lon) * cos(dest_lat);
      
-     return atan2(work_y, work_x) * 180.0 / M_PI;
+    return atan2(work_y, work_x) * 180.0 / M_PI;
 }
 
 float get_distance(float gps_lat, float gps_lon)
@@ -352,8 +347,8 @@ float get_distance(float gps_lat, float gps_lon)
     avg_lon = gps_state.gps_lon * M_PI / 180;
     
     
-      delta_lon = dest_lon-avg_lon;
-       return  acos( sin(avg_lat) * sin(dest_lat) + 
+    delta_lon = dest_lon-avg_lon;
+    return  acos( sin(avg_lat) * sin(dest_lat) + 
                   cos(avg_lat) * cos(dest_lat) * cos(delta_lon) ) * R;
 }
 
