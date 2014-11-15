@@ -642,7 +642,7 @@ void update_gps_state();
 void set_drone_heading(float bearing_angle);
 
 /** Compute GPS bearing and distance */
-float get_bearing(uint8_t waypoint_ptr);
+float get_bearing(float gps_lat, float gps_lon);
 
 /** Compute distance between current location and the location
  *  given by (gps_lat, gps_lon)

@@ -245,7 +245,8 @@ void navigate_next(uint8_t waypoint_ptr) {
     
     while (dist > 5.0 && count < 7) {
         count++;        
-        gps_bearing = get_bearing(waypoint_ptr);        
+        gps_bearing = get_bearing(gps_points[waypoint_ptr].gps_lat,
+                                  gps_points[waypoint_ptr].gps_lon);        
         set_drone_heading(gps_bearing);
         
         forward_distance(0.3, dist);
@@ -311,16 +312,14 @@ void set_drone_heading(float bearing_angle) {
     }
 }
 
-float get_bearing(uint8_t waypoint_ptr)
+float get_bearing(float gps_lat, float gps_lon)
 {
-    float dest_lat, dest_lon;
+    float dest_lat = gps_lat * M_PI / 180, 
+          dest_lon = gps_lon * M_PI / 180;
     float delta_lon, 
           work_x, work_y, 
           avg_lat, avg_lon;
-    
-    dest_lat = gps_points[waypoint_ptr].gps_lat * M_PI / 180,
-    dest_lon = gps_points[waypoint_ptr].gps_lon * M_PI / 180;  
-
+      
     update_gps_state();
     avg_lat = gps_state.gps_lat * M_PI / 180;
     avg_lon = gps_state.gps_lon * M_PI / 180;
